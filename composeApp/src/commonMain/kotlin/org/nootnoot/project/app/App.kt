@@ -1,14 +1,22 @@
 package org.nootnoot.project.app
 
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.viewmodel.koinViewModel
+import org.nootnoot.project.navigation.main.presentation.DrawerLogicRoot
+import org.nootnoot.project.navigation.main.presentation.DrawerLogicViewModel
 
 @Composable
 @Preview
 fun App() {
     MaterialTheme {
-        Text("Hello, World!")
+        RootLayout {
+            val drawerLogicViewModel = koinViewModel<DrawerLogicViewModel>()
+
+            DrawerLogicRoot(
+                viewModel = drawerLogicViewModel
+            )
+        }
     }
 }
