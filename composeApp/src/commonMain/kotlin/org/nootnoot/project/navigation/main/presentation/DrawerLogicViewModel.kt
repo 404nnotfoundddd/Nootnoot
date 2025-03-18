@@ -40,105 +40,143 @@ class DrawerLogicViewModel : ViewModel() {
     }
 
     private fun onDrag(dragAmount: Float) {
-        val maxOffsetX = state.value.maxOffsetX
-        val newOffset =
-            (state.value.drawerOffsetX + dragAmount).coerceIn(0f, maxOffsetX)
+        val minOffsetX = state.value.minOffsetX
 
-        if (newOffset >= 0 && newOffset <= maxOffsetX) {
-            _state.update {
-                it.copy(
-                    drawerOffsetX = newOffset,
-                    isContentUnderDrawer = true,
-                )
+        minOffsetX?.let { minOffset ->
+            val newOffset = (state.value.drawerOffsetX + dragAmount)
+                .coerceIn(minOffset, 0f)
+
+            println("onDrag: dragAmount=$dragAmount, newOffset=$newOffset, minOffset=$minOffset")
+            println("onDrag: current state=${state.value}")
+
+            if (newOffset <= 0) {
+                _state.update {
+                    it.copy(
+                        drawerOffsetX = newOffset,
+                        drawerContentZIndex = 1f,
+                    ).also { newState ->
+                        println("onDrag: updated state=$newState")
+                    }
+                }
             }
         }
-
-        println("ON DRAG: offsetX: ${state.value.drawerOffsetX}, dragStartX: ${state.value.dragStartX}")
-
     }
 
     private fun onDragEnd() {
-        if (state.value.isDrawerOpen) {
-            println("ON DRAG: drawer open")
-            println("ON DRAG: dragStartX Calculation: ${state.value.dragStartX - 200}")
-            val isEnoughToSwipe = (state.value.dragStartX - 100) > state.value.drawerOffsetX
-            println("ON DRAG END: offsetX: ${state.value.drawerOffsetX}, dragStartX: ${state.value.dragStartX}")
+        val dragThreshold = when (ScreenSize.value.first) {
+            in 0..600 -> 10
+            in 601..840 -> 30
+            else -> 40
+        }
 
-            if (isEnoughToSwipe) { // Left swipe while opened -> close
-                println("ON DRAG END: isEnoughToSwipe offsetX: ${state.value.drawerOffsetX}, dragStartX: ${state.value.dragStartX}")
-                closeDrawer()
-            } else { // Right swipe while opened -> stay opened
-                println("ON DRAG END: !!!isNotEnoughToSwipe offsetX: ${state.value.drawerOffsetX}, dragStartX: ${state.value.dragStartX}")
-                openDrawer()
+        println("onDragEnd: starting with state=${state.value}")
+
+        if (state.value.isDrawerOpen) {
+            val minOffsetX = state.value.minOffsetX
+            minOffsetX?.let { minOffset ->
+                val isEnoughToClose = state.value.drawerOffsetX > minOffset + dragThreshold
+                println("onDragEnd (drawer open): isEnoughToClose=$isEnoughToClose")
+                println("onDragEnd (drawer open): offsetX=${state.value.drawerOffsetX}, dragStartX=${state.value.dragStartX}")
+
+                if (isEnoughToClose) {
+                    closeDrawer()
+                } else {
+                    openDrawer()
+                }
             }
         } else {
-            println("ON DRAG: drawer closed")
+            val minOffsetX = state.value.minOffsetX
+            minOffsetX?.let { minOffset ->
+                val isEnoughToOpen = state.value.drawerOffsetX < -(dragThreshold)
 
-            val isEnoughToSwipe = (state.value.dragStartX + 100) < state.value.drawerOffsetX
-            println("ON DRAG END: offsetX: ${state.value.drawerOffsetX}, dragStartX: ${state.value.dragStartX}")
+                println("onDragEnd (drawer closed): isEnoughToOpen=$isEnoughToOpen")
+                println("onDragEnd (drawer closed): offsetX=${state.value.drawerOffsetX}, dragStartX=${state.value.dragStartX}")
 
-            if (isEnoughToSwipe) { // Right swipe while closed -> open
-                openDrawer()
-            } else { // Left swipe while closed -> stay closed
-                println("ON DRAG END: !!!isNotEnoughToSwipe offsetX: ${state.value.drawerOffsetX}, dragStartX: ${state.value.dragStartX}")
-                closeDrawer()
+                if (isEnoughToOpen) {
+                    openDrawer()
+                } else {
+                    closeDrawer()
+                }
             }
         }
     }
 
     private fun onDragCancel() {
-        println("ON DRAG CANCEL: offsetX: ${state.value.drawerOffsetX}, dragStartX: ${state.value.dragStartX}")
-        val maxOffsetX = state.value.maxOffsetX
-
-        _state.update {
-            it.copy(
-                isDragging = false,
-                drawerOffsetX = if (it.isDrawerOpen) maxOffsetX else 0f,
-                isContentUnderDrawer = false,
-            )
-        }
+//        println("onDragCancel: starting with state=${state.value}")
+//        val maxOffsetX = state.value.maxOffsetX
+//
+//        _state.update {
+//            it.copy(
+//                isDragging = false,
+//                drawerOffsetX = if (it.isDrawerOpen) maxOffsetX else 0f,
+//                isContentUnderDrawer = false,
+//            ).also { newState ->
+//                println("onDragCancel: updated state=$newState")
+//            }
+//        }
     }
 
 
     private fun onDragStart() {
+        println("onDragStart: starting with state=${state.value}")
         _state.update {
             it.copy(
                 isDragging = true,
                 dragStartX = it.drawerOffsetX,
-                isContentUnderDrawer = false,
-            )
+                drawerContentZIndex = 1f,
+            ).also { newState ->
+                println("onDragStart: updated state=$newState")
+            }
         }
     }
 
-
     private fun closeDrawer() {
+        println("closeDrawer: starting with state=${state.value}")
         _state.update {
             it.copy(
                 isDragging = false,
+                isDrawerOpen = false,
                 drawerOffsetX = 0f,
-                isContentUnderDrawer = false,
-            )
+                drawerContentZIndex = 1f,
+            ).also { newState ->
+                println("closeDrawer: updated state=$newState")
+            }
         }
     }
 
     private fun openDrawer() {
-        state.value.maxOffsetX.let { maxOffsetX ->
+        println("openDrawer: starting with state=${state.value}")
+        state.value.minOffsetX?.let { minOffsetX ->
             _state.update {
                 it.copy(
                     isDrawerOpen = true,
-                    drawerOffsetX = maxOffsetX
-                )
+                    drawerOffsetX = minOffsetX,
+                    drawerContentZIndex = 4f
+                ).also { newState ->
+                    println("openDrawer: updated state=$newState")
+                }
             }
         }
     }
 
     private fun observeScreenSize() {
+        println("observeScreenSize: starting collection")
         viewModelScope.launch {
             ScreenSize.collect { screenSize ->
+                println("observeScreenSize: received new size=$screenSize")
                 _state.update {
+                    val newMinOffsetX = when (screenSize.first) {
+                        in 0..600 -> -(screenSize.first.toFloat())
+                        in 601..840 -> -(screenSize.first / 2f)
+                        else -> -400f
+                    }
+
                     it.copy(
-                        maxOffsetX = screenSize.first / 1.5f
-                    )
+                        minOffsetX = newMinOffsetX,
+                        drawerOffsetX = if (it.isDrawerOpen) newMinOffsetX else 0f,
+                    ).also { newState ->
+                        println("observeScreenSize: updated state=$newState")
+                    }
                 }
             }
         }
